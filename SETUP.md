@@ -221,3 +221,126 @@ curl http://localhost:8000/api/user \
 curl -X POST http://localhost:8000/api/auth/logout \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
+
+---
+
+## Docker Setup (Alternative)
+
+Run the entire stack (MySQL, Laravel API, Expo Metro bundler) with a single command. No need to install PHP, Composer, or Node on your host.
+
+### Prerequisites
+
+| Tool | Version | Check |
+|------|---------|-------|
+| Docker | 20+ | `docker --version` |
+| Docker Compose | v2+ | `docker compose version` |
+
+### 1. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` at the project root and set `HOST_IP` to your machine's LAN IP:
+
+```bash
+# macOS
+ipconfig getifaddr en0
+
+# Linux
+hostname -I | awk '{print $1}'
+```
+
+Update the value in `.env`:
+
+```
+HOST_IP=192.168.1.42   # ← your actual IP
+```
+
+### 2. Start everything
+
+```bash
+docker compose up --build
+```
+
+First run will take a few minutes to download images and install dependencies. Subsequent starts are fast because dependencies are cached in named volumes.
+
+### 3. Verify services
+
+```bash
+# API health check
+curl http://localhost:8000/api/health
+
+# Migration status
+docker compose exec backend php artisan migrate:status
+
+# Metro bundler logs (should show QR code URL)
+docker compose logs mobile
+```
+
+### 4. Connect from a physical device
+
+1. Make sure your phone is on the **same Wi-Fi** as your computer
+2. Open Expo Go and scan the QR code from the Metro bundler logs
+3. The app will connect to `http://HOST_IP:8000/api` for API calls
+
+### 5. Connect from Android emulator
+
+```bash
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8000 tcp:8000
+```
+
+Then connect to `exp://localhost:8081` in the emulator.
+
+### 6. Common Docker commands
+
+```bash
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (fresh start)
+docker compose down -v
+
+# Rebuild a single service
+docker compose up --build backend
+
+# Run artisan commands
+docker compose exec backend php artisan tinker
+docker compose exec backend php artisan migrate:fresh --seed
+
+# View logs
+docker compose logs -f backend
+docker compose logs -f mobile
+
+# Access MySQL from host
+mysql -h 127.0.0.1 -P 3307 -u laravel -p
+```
+
+### 7. Database access
+
+**phpMyAdmin** is available at `http://localhost:8090`. Log in with your `DB_USERNAME`/`DB_PASSWORD` or `root`/`DB_ROOT_PASSWORD`.
+
+MySQL is also exposed on `127.0.0.1:3307` for CLI or GUI clients:
+
+| Setting | Value |
+|---------|-------|
+| Host | `127.0.0.1` |
+| Port | `3307` |
+| Database | value of `DB_DATABASE` |
+| Username | value of `DB_USERNAME` |
+| Password | value of `DB_PASSWORD` |
+
+### Troubleshooting
+
+**Metro QR code points to wrong IP:**
+Make sure `HOST_IP` in `.env` matches your current LAN IP. Restart with `docker compose up`.
+
+**`npm ci` or `composer install` fails:**
+Clear named volumes and rebuild: `docker compose down -v && docker compose up --build`.
+
+**Port conflicts:**
+If 3307, 8000, 8081, or 8090 are already in use, stop the conflicting service or use `docker-compose.override.yml` to remap ports.
+
+**MySQL connection refused in backend:**
+The entrypoint waits up to 60 seconds for MySQL. Check `docker compose logs db` for errors.

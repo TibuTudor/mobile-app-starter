@@ -11,6 +11,14 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n${message}`);
+  } else {
+    showAlert(title, message);
+  }
+};
 import { Link, router } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 
@@ -23,17 +31,17 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name || !email || !password || !passwordConfirmation) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
 
     if (password !== passwordConfirmation) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert('Error', 'Passwords do not match');
       return;
     }
 
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+      showAlert('Error', 'Password must be at least 8 characters');
       return;
     }
 
@@ -46,7 +54,7 @@ export default function RegisterScreen() {
       });
       router.replace('/(tabs)');
     } catch (err: any) {
-      Alert.alert('Registration Failed', err.message);
+      showAlert('Registration Failed', err.message);
     }
   };
 
