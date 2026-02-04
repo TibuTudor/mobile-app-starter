@@ -226,7 +226,7 @@ curl -X POST http://localhost:8000/api/auth/logout \
 
 ## Docker Setup (Alternative)
 
-Run the entire stack (MySQL, Laravel API, Expo Metro bundler) with a single command. No need to install PHP, Composer, or Node on your host.
+Run the entire stack (MySQL, Laravel API, Expo Metro bundler, phpMyAdmin) with a single command. No need to install PHP, Composer, or Node on your host.
 
 ### Prerequisites
 
@@ -263,20 +263,17 @@ HOST_IP=192.168.1.42   # ← your actual IP
 docker compose up --build
 ```
 
-First run will take a few minutes to download images and install dependencies. Subsequent starts are fast because dependencies are cached in named volumes.
+First run will download images and install dependencies. Subsequent starts are fast because dependencies are cached in named volumes.
 
 ### 3. Verify services
 
-```bash
-# API health check
-curl http://localhost:8000/api/health
-
-# Migration status
-docker compose exec backend php artisan migrate:status
-
-# Metro bundler logs (should show QR code URL)
-docker compose logs mobile
-```
+| Service | URL / Command | Expected Result |
+|---------|---------------|-----------------|
+| API | `curl http://localhost:8000/api/health` | `{"status":"ok"}` |
+| Migrations | `docker compose exec backend php artisan migrate:status` | All migrations ran |
+| Metro bundler | `docker compose logs mobile` | QR code URL with correct HOST_IP |
+| phpMyAdmin | http://localhost:8090 | Login page |
+| MySQL (CLI) | `mysql -h 127.0.0.1 -P 3307 -u laravel -p` | MySQL prompt |
 
 ### 4. Connect from a physical device
 
@@ -287,13 +284,22 @@ docker compose logs mobile
 ### 5. Connect from Android emulator
 
 ```bash
-adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8082 tcp:8082
 adb reverse tcp:8000 tcp:8000
 ```
 
-Then connect to `exp://localhost:8081` in the emulator.
+Then connect to `exp://localhost:8082` in the emulator.
 
-### 6. Common Docker commands
+### 6. Service ports
+
+| Service | Host Port | Container Port |
+|---------|-----------|----------------|
+| MySQL | 3307 | 3306 |
+| Laravel API | 8000 | 8000 |
+| phpMyAdmin | 8090 | 80 |
+| Expo Metro | 8082 | 8081 |
+
+### 7. Common Docker commands
 
 ```bash
 # Stop all services
@@ -317,9 +323,11 @@ docker compose logs -f mobile
 mysql -h 127.0.0.1 -P 3307 -u laravel -p
 ```
 
-### 7. Database access
+### 8. Database access
 
-**phpMyAdmin** is available at `http://localhost:8090`. Log in with your `DB_USERNAME`/`DB_PASSWORD` or `root`/`DB_ROOT_PASSWORD`.
+**phpMyAdmin** is available at `http://localhost:8090`. Log in with:
+- Regular user: `DB_USERNAME` / `DB_PASSWORD` (defaults: `laravel` / `secret`)
+- Root user: `root` / `DB_ROOT_PASSWORD` (default: `rootsecret`)
 
 MySQL is also exposed on `127.0.0.1:3307` for CLI or GUI clients:
 
@@ -327,20 +335,29 @@ MySQL is also exposed on `127.0.0.1:3307` for CLI or GUI clients:
 |---------|-------|
 | Host | `127.0.0.1` |
 | Port | `3307` |
-| Database | value of `DB_DATABASE` |
-| Username | value of `DB_USERNAME` |
-| Password | value of `DB_PASSWORD` |
+| Database | value of `DB_DATABASE` (default: `laravel`) |
+| Username | value of `DB_USERNAME` (default: `laravel`) |
+| Password | value of `DB_PASSWORD` (default: `secret`) |
+
+### How it works
+
+**Named volumes** solve the macOS/Linux binary conflict: the host has macOS-native binaries in `vendor/` and `node_modules/`, while the container needs Linux binaries. Named volumes shadow the host directories inside the container, and entrypoint scripts run `composer install` / `npm ci` into these volumes on first start.
+
+**Entrypoint `.env` patching:** The backend source is bind-mounted from the host. Since `php artisan serve` re-reads the `.env` file per request (bypassing shell environment variables), the backend entrypoint uses `sed` to override DB settings in `.env` to match the Docker MySQL configuration. This means the backend always connects to MySQL in Docker, even if the host's `.env` has `DB_CONNECTION=sqlite`.
 
 ### Troubleshooting
 
 **Metro QR code points to wrong IP:**
-Make sure `HOST_IP` in `.env` matches your current LAN IP. Restart with `docker compose up`.
+Make sure `HOST_IP` in the root `.env` matches your current LAN IP. Restart with `docker compose up`.
 
 **`npm ci` or `composer install` fails:**
 Clear named volumes and rebuild: `docker compose down -v && docker compose up --build`.
 
 **Port conflicts:**
-If 3307, 8000, 8081, or 8090 are already in use, stop the conflicting service or use `docker-compose.override.yml` to remap ports.
+If 3307, 8000, 8082, or 8090 are already in use, stop the conflicting service or create a `docker-compose.override.yml` to remap ports.
 
 **MySQL connection refused in backend:**
 The entrypoint waits up to 60 seconds for MySQL. Check `docker compose logs db` for errors.
+
+**Backend uses SQLite instead of MySQL:**
+The entrypoint patches the bind-mounted `.env` automatically. If you still see SQLite being used, rebuild the backend: `docker compose up --build backend`.

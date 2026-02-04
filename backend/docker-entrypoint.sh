@@ -10,6 +10,23 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
+# Override DB settings in .env to match Docker Compose environment.
+# The bind-mounted .env may have DB_CONNECTION=sqlite from local development.
+# php artisan serve re-reads .env per request, bypassing shell env vars.
+echo "==> Configuring .env for Docker (MySQL)..."
+sed -i "s/^DB_CONNECTION=.*/DB_CONNECTION=${DB_CONNECTION:-mysql}/" .env
+# Uncomment and set DB_HOST/DB_PORT/DB_DATABASE/DB_USERNAME/DB_PASSWORD if commented
+sed -i "s/^#\s*DB_HOST=.*/DB_HOST=${DB_HOST:-db}/" .env
+sed -i "s/^DB_HOST=.*/DB_HOST=${DB_HOST:-db}/" .env
+sed -i "s/^#\s*DB_PORT=.*/DB_PORT=${DB_PORT:-3306}/" .env
+sed -i "s/^DB_PORT=.*/DB_PORT=${DB_PORT:-3306}/" .env
+sed -i "s/^#\s*DB_DATABASE=.*/DB_DATABASE=${DB_DATABASE:-laravel}/" .env
+sed -i "s/^DB_DATABASE=.*/DB_DATABASE=${DB_DATABASE:-laravel}/" .env
+sed -i "s/^#\s*DB_USERNAME=.*/DB_USERNAME=${DB_USERNAME:-laravel}/" .env
+sed -i "s/^DB_USERNAME=.*/DB_USERNAME=${DB_USERNAME:-laravel}/" .env
+sed -i "s/^#\s*DB_PASSWORD=.*/DB_PASSWORD=${DB_PASSWORD:-secret}/" .env
+sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=${DB_PASSWORD:-secret}/" .env
+
 # Generate APP_KEY if it is empty
 if grep -q "^APP_KEY=$" .env; then
     echo "==> Generating APP_KEY..."

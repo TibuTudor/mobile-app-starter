@@ -1,20 +1,76 @@
 # Mobile App Starter - Laravel + React Native
 
-A cross-platform mobile app skeleton with authentication (Email, Google, Apple) using Laravel backend and React Native (Expo) frontend.
+A cross-platform mobile app skeleton with authentication (Email, Google, Apple) using Laravel backend and React Native (Expo) frontend. Includes a Docker Compose setup to run the entire stack with a single command.
 
 ## Project Structure
 
 ```
 mobile-app-starter/
+├── docker-compose.yml       # Orchestrates all services
+├── .env.example             # Docker Compose variables (HOST_IP, DB creds)
+├── SETUP.md                 # Detailed setup guide
 ├── backend/                 # Laravel API
-│   ├── CLAUDE.md           # Instructions for Claude Code
-│   ├── setup.sh            # Automated setup script
-│   └── starter-files/      # Pre-configured files to copy
+│   ├── Dockerfile           # PHP 8.2-cli + extensions + Composer
+│   ├── docker-entrypoint.sh # composer install, wait for DB, migrate, serve
+│   ├── .dockerignore
+│   ├── CLAUDE.md            # Instructions for Claude Code
+│   ├── setup.sh             # Manual setup script (non-Docker)
+│   └── starter-files/       # Pre-configured files to copy
 └── mobile/                  # React Native (Expo) app
-    ├── CLAUDE.md           # Instructions for Claude Code
-    ├── setup.sh            # Automated setup script
-    └── starter-files/      # Pre-configured files to copy
+    ├── Dockerfile           # Node 20 + Expo CLI
+    ├── docker-entrypoint.sh # npm ci, start Metro bundler
+    ├── .dockerignore
+    ├── CLAUDE.md            # Instructions for Claude Code
+    ├── setup.sh             # Manual setup script (non-Docker)
+    └── starter-files/       # Pre-configured files to copy
 ```
+
+## Quick Start with Docker (Recommended)
+
+Run the entire stack — MySQL, Laravel API, Expo Metro bundler, and phpMyAdmin — with one command. No need to install PHP, Composer, or Node on your host.
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/) 20+ with Compose v2+
+
+### 1. Configure environment
+
+```bash
+cp .env.example .env
+```
+
+Set `HOST_IP` to your machine's LAN IP:
+
+```bash
+# macOS
+ipconfig getifaddr en0
+
+# Linux
+hostname -I | awk '{print $1}'
+```
+
+### 2. Start everything
+
+```bash
+docker compose up --build
+```
+
+### 3. Verify
+
+| Service | URL | Notes |
+|---------|-----|-------|
+| Laravel API | http://localhost:8000/api/health | Returns `{"status":"ok"}` |
+| Expo Metro | http://localhost:8082 | Metro bundler (scan QR with Expo Go) |
+| phpMyAdmin | http://localhost:8090 | DB admin UI |
+| MySQL | `127.0.0.1:3307` | Connect with any DB client |
+
+### 4. Connect from your phone
+
+Make sure your phone is on the same Wi-Fi as your computer, then scan the QR code from the Metro bundler logs with Expo Go.
+
+For full Docker documentation, see [SETUP.md](SETUP.md#docker-setup-alternative).
+
+---
 
 ## Quick Start with Claude Code
 
@@ -53,30 +109,52 @@ chmod +x setup.sh
 ## Features
 
 ### Authentication
-- ✅ Email/Password registration and login
-- ✅ Google OAuth sign-in
-- ✅ Apple Sign-In
-- ✅ Token-based API authentication (Sanctum)
-- ✅ Secure token storage on mobile
+- Email/Password registration and login
+- Google OAuth sign-in
+- Apple Sign-In
+- Token-based API authentication (Sanctum)
+- Secure token storage on mobile (SecureStore on native, localStorage on web)
 
 ### Backend (Laravel)
-- Laravel 11 with Sanctum for API tokens
+- Laravel 12 with Sanctum for API tokens
 - Socialite for OAuth providers
 - RESTful API structure
 - User model with social provider tracking
 - CORS configured for mobile
+- Dockerized with MySQL 8.0
 
 ### Mobile (React Native)
 - Expo SDK 52+
 - TypeScript
 - Expo Router for navigation
 - expo-auth-session for OAuth
-- expo-secure-store for token persistence
-- Pre-built auth screens
+- expo-secure-store for token persistence (with web fallback)
+- Web platform support
+- Pre-built auth screens (login, register, profile)
+
+## Docker Services
+
+| Service | Image | Host Port | Description |
+|---------|-------|-----------|-------------|
+| **db** | mysql:8.0 | 3307 | MySQL database with persistent volume |
+| **backend** | PHP 8.2-cli | 8000 | Laravel API server |
+| **phpmyadmin** | phpmyadmin:5 | 8090 | Database admin UI |
+| **mobile** | Node 20 | 8082 | Expo Metro bundler |
 
 ## Environment Variables
 
-### Backend (.env)
+### Root `.env` (Docker Compose)
+
+```env
+HOST_IP=192.168.1.X       # Your machine's LAN IP
+DB_DATABASE=laravel
+DB_USERNAME=laravel
+DB_PASSWORD=secret
+DB_ROOT_PASSWORD=rootsecret
+APP_KEY=                   # Auto-generated on first run
+```
+
+### Backend `.env`
 
 ```env
 APP_URL=http://localhost:8000
@@ -85,6 +163,8 @@ DB_DATABASE=your_database
 DB_USERNAME=your_username
 DB_PASSWORD=your_password
 
+SANCTUM_STATEFUL_DOMAINS=localhost,localhost:8000
+
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 
@@ -92,7 +172,7 @@ APPLE_CLIENT_ID=your_apple_client_id
 APPLE_CLIENT_SECRET=your_apple_client_secret
 ```
 
-### Mobile (.env)
+### Mobile `.env`
 
 ```env
 EXPO_PUBLIC_API_URL=http://localhost:8000/api
@@ -130,23 +210,44 @@ EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=your_google_android_client_id
 
 ## Development
 
-### Running Backend
+### With Docker
 
 ```bash
-cd backend
-php artisan serve
+# Start all services
+docker compose up --build
+
+# Stop all services
+docker compose down
+
+# Rebuild a single service
+docker compose up --build backend
+
+# Run artisan commands
+docker compose exec backend php artisan tinker
+
+# View logs
+docker compose logs -f backend
+docker compose logs -f mobile
+
+# Fresh database
+docker compose exec backend php artisan migrate:fresh --seed
 ```
 
-### Running Mobile
+### Without Docker
 
 ```bash
+# Backend
+cd backend
+php artisan serve --host=0.0.0.0
+
+# Mobile
 cd mobile
 npx expo start
 ```
 
 ## Extending This Skeleton
 
-This POC is designed to be extended. Common next steps:
+This starter is designed to be extended. Common next steps:
 
 1. Add more API routes in `routes/api.php`
 2. Create new screens in `mobile/app/`
