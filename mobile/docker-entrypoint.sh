@@ -10,6 +10,11 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
+# Patch EXPO_PUBLIC_API_URL with the value from docker-compose environment
+if [ -n "${EXPO_PUBLIC_API_URL:-}" ]; then
+    echo "==> Setting EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL in .env"
+    sed -i "s|^EXPO_PUBLIC_API_URL=.*|EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL|" .env
+fi
+
 echo "==> Starting Expo Metro bundler on port 8081..."
-export EXPO_NO_INTERACTIVE=1
 exec npx expo start --port 8081

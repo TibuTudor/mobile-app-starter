@@ -75,18 +75,27 @@ Instead of steps 1-6, you can run the entire stack from the project root:
 
 ```bash
 cd ..
-cp .env.example .env   # Set HOST_IP to your LAN IP
-docker compose up --build
+cp .env.example .env
+./start.sh
 ```
 
-This starts the Expo Metro bundler (port 8082), the Laravel API (port 8000), MySQL, and phpMyAdmin. The mobile entrypoint handles `npm ci` and starting Metro automatically.
+`start.sh` auto-detects your LAN IP, writes it into the root `.env` (`HOST_IP`) and `mobile/.env` (`EXPO_PUBLIC_API_URL`), then runs `docker compose up --build -d`. It waits for Metro to be ready and prints service URLs plus the Expo QR code. No manual IP editing is needed.
+
+You can also start manually if you prefer:
+
+```bash
+docker compose up --build -d
+```
+
+This starts the Expo Metro bundler (port 8081), the Laravel API (port 8000), MySQL, and phpMyAdmin. The mobile entrypoint handles `npm ci` and starting Metro automatically.
 
 Docker files:
 - `Dockerfile` — Node 20-slim with git
-- `docker-entrypoint.sh` — runs `npm ci`, starts Metro with `EXPO_NO_INTERACTIVE=1`
+- `docker-entrypoint.sh` — runs `npm ci`, patches `EXPO_PUBLIC_API_URL` from the docker-compose environment, starts Metro
 - `.dockerignore` — excludes node_modules/, .expo/, dist/, ios/, android/
+- `start.sh` (project root) — auto-detect IP, update `.env` files, start containers, display QR code
 
-The Metro bundler runs inside Docker but the app itself runs on your physical device or emulator. `REACT_NATIVE_PACKAGER_HOSTNAME` is set to your LAN IP so the QR code points to the correct address.
+The Metro bundler runs inside Docker but the app itself runs on your physical device or emulator. `REACT_NATIVE_PACKAGER_HOSTNAME` is set to your LAN IP so the QR code points to the correct address. The entrypoint patches `EXPO_PUBLIC_API_URL` on every container start using the value from `docker-compose.yml`, so the IP stays current even if the container restarts.
 
 ## File Descriptions
 
@@ -167,4 +176,4 @@ npx expo run:android
 - iOS Simulator and Android Emulator need different API URLs
 - Social login requires development builds for full functionality
 - Web platform is supported: `expo-secure-store` falls back to `localStorage`, `Alert.alert` falls back to `window.alert`
-- When using Docker, the Metro bundler is exposed on host port 8082 (container port 8081)
+- When using Docker, the Metro bundler is exposed on host port 8081
