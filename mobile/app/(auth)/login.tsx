@@ -11,6 +11,14 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
 import { Link, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
@@ -42,7 +50,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
 
@@ -50,7 +58,7 @@ export default function LoginScreen() {
       await login({ email, password });
       router.replace('/(tabs)');
     } catch (err: any) {
-      Alert.alert('Login Failed', err.message);
+      showAlert('Login Failed', err.message);
     }
   };
 
@@ -62,7 +70,7 @@ export default function LoginScreen() {
       });
       router.replace('/(tabs)');
     } catch (err: any) {
-      Alert.alert('Google Login Failed', err.message);
+      showAlert('Google Login Failed', err.message);
     }
   };
 
@@ -88,7 +96,7 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
     } catch (err: any) {
       if (err.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Apple Login Failed', err.message);
+        showAlert('Apple Login Failed', err.message);
       }
     }
   };

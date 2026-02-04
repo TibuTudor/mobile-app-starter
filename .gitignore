@@ -16,3 +16,6 @@ Thumbs.db
 
 # Stray brace-expansion directory
 {backend,mobile}/
+
+# Docker
+docker-compose.override.yml

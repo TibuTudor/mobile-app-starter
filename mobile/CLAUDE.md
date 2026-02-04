@@ -69,6 +69,25 @@ Add to `app.json`:
 npx expo start
 ```
 
+### Alternative: Docker Setup
+
+Instead of steps 1-6, you can run the entire stack from the project root:
+
+```bash
+cd ..
+cp .env.example .env   # Set HOST_IP to your LAN IP
+docker compose up --build
+```
+
+This starts the Expo Metro bundler (port 8082), the Laravel API (port 8000), MySQL, and phpMyAdmin. The mobile entrypoint handles `npm ci` and starting Metro automatically.
+
+Docker files:
+- `Dockerfile` — Node 20-slim with git
+- `docker-entrypoint.sh` — runs `npm ci`, starts Metro with `EXPO_NO_INTERACTIVE=1`
+- `.dockerignore` — excludes node_modules/, .expo/, dist/, ios/, android/
+
+The Metro bundler runs inside Docker but the app itself runs on your physical device or emulator. `REACT_NATIVE_PACKAGER_HOSTNAME` is set to your LAN IP so the QR code points to the correct address.
+
 ## File Descriptions
 
 ### services/api.ts
@@ -76,6 +95,7 @@ Axios instance configured with:
 - Base URL from environment
 - Auth token injection via interceptors
 - Response error handling
+- Web-compatible token storage (SecureStore on native, localStorage on web)
 
 ### services/auth.ts
 Authentication service with:
@@ -83,7 +103,7 @@ Authentication service with:
 - `register()` - Email/password registration
 - `socialLogin()` - Google/Apple OAuth
 - `logout()` - Token revocation
-- Token storage using expo-secure-store
+- Token storage using expo-secure-store (with localStorage fallback on web)
 
 ### store/authStore.ts
 Zustand store managing:
@@ -146,3 +166,5 @@ npx expo run:android
 - For local development, use your computer's IP instead of localhost
 - iOS Simulator and Android Emulator need different API URLs
 - Social login requires development builds for full functionality
+- Web platform is supported: `expo-secure-store` falls back to `localStorage`, `Alert.alert` falls back to `window.alert`
+- When using Docker, the Metro bundler is exposed on host port 8082 (container port 8081)

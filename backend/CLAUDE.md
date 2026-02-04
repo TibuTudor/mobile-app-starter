@@ -63,6 +63,29 @@ php artisan migrate
 php artisan serve
 ```
 
+### Alternative: Docker Setup
+
+Instead of steps 1-7, you can run the entire stack from the project root:
+
+```bash
+cd ..
+cp .env.example .env   # Set HOST_IP to your LAN IP
+docker compose up --build
+```
+
+This starts MySQL, the Laravel API (port 8000), phpMyAdmin (port 8090), and the Expo Metro bundler (port 8082). The backend entrypoint handles `composer install`, `.env` configuration, migrations, and starting the server automatically.
+
+Docker files:
+- `Dockerfile` — PHP 8.2-cli with pdo_mysql, zip, bcmath, gd, mbstring, xml + Composer 2
+- `docker-entrypoint.sh` — installs deps, patches `.env` for MySQL, waits for DB, migrates, serves
+- `.dockerignore` — excludes vendor/, .env, storage/logs, database.sqlite
+
+Running artisan commands in Docker:
+```bash
+docker compose exec backend php artisan tinker
+docker compose exec backend php artisan migrate:status
+```
+
 ## File Descriptions
 
 ### AuthController.php

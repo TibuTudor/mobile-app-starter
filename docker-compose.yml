@@ -1,0 +1,81 @@
+services:
+  # ── MySQL 8.0 ──────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Laravel API ────────────────────────────────────────────
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+      - backend_storage:/var/www/html/storage
+    environment:
+      APP_NAME: Laravel
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://${HOST_IP}:8000
+      APP_KEY: ${APP_KEY}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SANCTUM_STATEFUL_DOMAINS: "localhost,localhost:8000,${HOST_IP},${HOST_IP}:8000"
+
+  # ── phpMyAdmin ─────────────────────────────────────────────
+  phpmyadmin:
+    image: phpmyadmin:5
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+
+  # ── Expo / Metro bundler ───────────────────────────────────
+  mobile:
+    build: ./mobile
+    restart: unless-stopped
+    ports:
+      - "8082:8081"
+    depends_on:
+      - backend
+    volumes:
+      - ./mobile:/app
+      - mobile_node_modules:/app/node_modules
+    environment:
+      REACT_NATIVE_PACKAGER_HOSTNAME: ${HOST_IP}
+      EXPO_PUBLIC_API_URL: http://${HOST_IP}:8000/api
+
+volumes:
+  db_data:
+  backend_vendor:
+  backend_storage:
+  mobile_node_modules:
