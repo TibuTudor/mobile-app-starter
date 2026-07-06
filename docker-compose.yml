@@ -4,7 +4,8 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     ports:
-      - "3307:3306"
+      # Host port is configurable via DB_HOST_PORT in .env (default 3307). Container port stays 3306.
+      - "${DB_HOST_PORT:-3307}:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_DATABASE}
@@ -23,7 +24,8 @@ services:
     build: ./backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      # Host port is configurable via API_HOST_PORT in .env (default 8000). Container port stays 8000.
+      - "${API_HOST_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -35,7 +37,7 @@ services:
       APP_NAME: Laravel
       APP_ENV: local
       APP_DEBUG: "true"
-      APP_URL: http://${HOST_IP}:8000
+      APP_URL: http://${HOST_IP}:${API_HOST_PORT:-8000}
       APP_KEY: ${APP_KEY}
       DB_CONNECTION: mysql
       DB_HOST: db
@@ -43,14 +45,15 @@ services:
       DB_DATABASE: ${DB_DATABASE}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-      SANCTUM_STATEFUL_DOMAINS: "localhost,localhost:8000,${HOST_IP},${HOST_IP}:8000"
+      SANCTUM_STATEFUL_DOMAINS: "localhost,localhost:${API_HOST_PORT:-8000},${HOST_IP},${HOST_IP}:${API_HOST_PORT:-8000}"
 
   # ── phpMyAdmin ─────────────────────────────────────────────
   phpmyadmin:
     image: phpmyadmin:5
     restart: unless-stopped
     ports:
-      - "8090:80"
+      # Host port is configurable via PMA_HOST_PORT in .env (default 8090). Container port stays 80.
+      - "${PMA_HOST_PORT:-8090}:80"
     depends_on:
       db:
         condition: service_healthy
@@ -65,7 +68,9 @@ services:
     restart: unless-stopped
     tty: true
     ports:
-      - "8081:8081"
+      # Metro must be symmetric (host port == container port) so the device can reach the exact
+      # address the QR code advertises. Configurable via METRO_HOST_PORT in .env (default 8081).
+      - "${METRO_HOST_PORT:-8081}:${METRO_HOST_PORT:-8081}"
     depends_on:
       - backend
     volumes:
@@ -73,7 +78,9 @@ services:
       - mobile_node_modules:/app/node_modules
     environment:
       REACT_NATIVE_PACKAGER_HOSTNAME: ${HOST_IP}
-      EXPO_PUBLIC_API_URL: http://${HOST_IP}:8000/api
+      # Port Metro binds inside the container; the entrypoint passes it to `expo start --port`.
+      RCT_METRO_PORT: ${METRO_HOST_PORT:-8081}
+      EXPO_PUBLIC_API_URL: http://${HOST_IP}:${API_HOST_PORT:-8000}/api
 
 volumes:
   db_data:

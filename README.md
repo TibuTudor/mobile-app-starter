@@ -60,7 +60,7 @@ docker compose up --build
 | Service | URL | Notes |
 |---------|-----|-------|
 | Laravel API | http://localhost:8000/api/health | Returns `{"status":"ok"}` |
-| Expo Metro | http://localhost:8082 | Metro bundler (scan QR with Expo Go) |
+| Expo Metro | http://localhost:8081 | Metro bundler (scan QR with Expo Go) |
 | phpMyAdmin | http://localhost:8090 | DB admin UI |
 | MySQL | `127.0.0.1:3307` | Connect with any DB client |
 
@@ -134,12 +134,14 @@ chmod +x setup.sh
 
 ## Docker Services
 
-| Service | Image | Host Port | Description |
-|---------|-------|-----------|-------------|
-| **db** | mysql:8.0 | 3307 | MySQL database with persistent volume |
-| **backend** | PHP 8.2-cli | 8000 | Laravel API server |
-| **phpmyadmin** | phpmyadmin:5 | 8090 | Database admin UI |
-| **mobile** | Node 20 | 8082 | Expo Metro bundler |
+| Service | Image | Host Port | Env override | Description |
+|---------|-------|-----------|--------------|-------------|
+| **db** | mysql:8.0 | 3307 | `DB_HOST_PORT` | MySQL database with persistent volume |
+| **backend** | PHP 8.2-cli | 8000 | `API_HOST_PORT` | Laravel API server |
+| **phpmyadmin** | phpmyadmin:5 | 8090 | `PMA_HOST_PORT` | Database admin UI |
+| **mobile** | Node 20 | 8081 | `METRO_HOST_PORT` | Expo Metro bundler |
+
+**Host ports are configurable.** These defaults are baked into `docker-compose.yml`, but if another project on your machine already uses one, set the matching variable in the root `.env` (e.g. `API_HOST_PORT=18000`) and restart — no need to edit `docker-compose.yml`. Container-internal ports are unaffected.
 
 ## Environment Variables
 
@@ -152,6 +154,13 @@ DB_USERNAME=laravel
 DB_PASSWORD=secret
 DB_ROOT_PASSWORD=rootsecret
 APP_KEY=                   # Auto-generated on first run
+
+# Optional host-port overrides (defaults shown). Uncomment only to avoid a clash
+# with another project on the same machine.
+# DB_HOST_PORT=3307
+# API_HOST_PORT=8000
+# PMA_HOST_PORT=8090
+# METRO_HOST_PORT=8081
 ```
 
 ### Backend `.env`

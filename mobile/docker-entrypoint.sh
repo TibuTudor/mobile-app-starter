@@ -16,5 +16,7 @@ if [ -n "${EXPO_PUBLIC_API_URL:-}" ]; then
     sed -i "s|^EXPO_PUBLIC_API_URL=.*|EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL|" .env
 fi
 
-echo "==> Starting Expo Metro bundler on port 8081..."
-exec npx expo start --port 8081
+# Metro port comes from RCT_METRO_PORT (set by docker-compose from METRO_HOST_PORT), default 8081.
+METRO_PORT="${RCT_METRO_PORT:-8081}"
+echo "==> Starting Expo Metro bundler on port ${METRO_PORT}..."
+exec npx expo start --port "${METRO_PORT}"

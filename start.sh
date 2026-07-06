@@ -29,10 +29,16 @@ fi
 sed -i.bak "s/^HOST_IP=.*/HOST_IP=$IP/" .env && rm -f .env.bak
 echo "Updated .env -> HOST_IP=$IP"
 
+# ── Resolve host ports (optional overrides in .env; else defaults matching docker-compose) ──
+read_port() { grep -E "^$1=" .env 2>/dev/null | head -1 | cut -d '=' -f2 | tr -d '[:space:]'; }
+API_HOST_PORT=$(read_port API_HOST_PORT);     API_HOST_PORT=${API_HOST_PORT:-8000}
+PMA_HOST_PORT=$(read_port PMA_HOST_PORT);      PMA_HOST_PORT=${PMA_HOST_PORT:-8090}
+METRO_HOST_PORT=$(read_port METRO_HOST_PORT);  METRO_HOST_PORT=${METRO_HOST_PORT:-8081}
+
 # ── 3. Update mobile/.env ──────────────────────────────────────────
 if [ -f mobile/.env ]; then
-  sed -i.bak "s|^EXPO_PUBLIC_API_URL=.*|EXPO_PUBLIC_API_URL=http://$IP:8000/api|" mobile/.env && rm -f mobile/.env.bak
-  echo "Updated mobile/.env -> EXPO_PUBLIC_API_URL=http://$IP:8000/api"
+  sed -i.bak "s|^EXPO_PUBLIC_API_URL=.*|EXPO_PUBLIC_API_URL=http://$IP:$API_HOST_PORT/api|" mobile/.env && rm -f mobile/.env.bak
+  echo "Updated mobile/.env -> EXPO_PUBLIC_API_URL=http://$IP:$API_HOST_PORT/api"
 fi
 
 # ── 4. Start Docker ────────────────────────────────────────────────
@@ -69,10 +75,10 @@ echo "================================================"
 echo "  All services are running!"
 echo "================================================"
 echo ""
-echo "  Backend API:   http://$IP:8000"
-echo "  phpMyAdmin:    http://$IP:8090"
-echo "  Metro bundler: http://$IP:8081"
-echo "  Expo URL:      exp://$IP:8081"
+echo "  Backend API:   http://$IP:$API_HOST_PORT"
+echo "  phpMyAdmin:    http://$IP:$PMA_HOST_PORT"
+echo "  Metro bundler: http://$IP:$METRO_HOST_PORT"
+echo "  Expo URL:      exp://$IP:$METRO_HOST_PORT"
 echo ""
 echo "  Scan the QR code below with Expo Go:"
 echo ""
@@ -81,5 +87,5 @@ echo ""
 docker compose logs mobile 2>&1 | sed -n '/█/,/█/p' | tail -20
 
 echo ""
-echo "  Or open Expo Go and enter: exp://$IP:8081"
+echo "  Or open Expo Go and enter: exp://$IP:$METRO_HOST_PORT"
 echo "================================================"

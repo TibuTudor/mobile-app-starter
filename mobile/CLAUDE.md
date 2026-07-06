@@ -176,4 +176,4 @@ npx expo run:android
 - iOS Simulator and Android Emulator need different API URLs
 - Social login requires development builds for full functionality
 - Web platform is supported: `expo-secure-store` falls back to `localStorage`, `Alert.alert` falls back to `window.alert`
-- When using Docker, the Metro bundler is exposed on host port 8081
+- When using Docker, the Metro bundler is exposed on host port 8081 (override with `METRO_HOST_PORT` in the root `.env`; it is passed to `expo start --port` via `RCT_METRO_PORT` and the host/container ports stay equal so the QR code remains reachable)

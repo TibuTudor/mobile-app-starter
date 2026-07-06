@@ -284,20 +284,22 @@ First run will download images and install dependencies. Subsequent starts are f
 ### 5. Connect from Android emulator
 
 ```bash
-adb reverse tcp:8082 tcp:8082
+adb reverse tcp:8081 tcp:8081
 adb reverse tcp:8000 tcp:8000
 ```
 
-Then connect to `exp://localhost:8082` in the emulator.
+Then connect to `exp://localhost:8081` in the emulator. (If you overrode `METRO_HOST_PORT` / `API_HOST_PORT`, use those ports instead.)
 
 ### 6. Service ports
 
-| Service | Host Port | Container Port |
-|---------|-----------|----------------|
-| MySQL | 3307 | 3306 |
-| Laravel API | 8000 | 8000 |
-| phpMyAdmin | 8090 | 80 |
-| Expo Metro | 8082 | 8081 |
+| Service | Host Port | Container Port | Env override |
+|---------|-----------|----------------|--------------|
+| MySQL | 3307 | 3306 | `DB_HOST_PORT` |
+| Laravel API | 8000 | 8000 | `API_HOST_PORT` |
+| phpMyAdmin | 8090 | 80 | `PMA_HOST_PORT` |
+| Expo Metro | 8081 | 8081 | `METRO_HOST_PORT` |
+
+Host ports are the defaults in `docker-compose.yml`. To avoid a clash with another project, set the matching variable in the root `.env` (e.g. `API_HOST_PORT=18000`) and restart. Metro's host and container ports stay equal so the QR code the phone scans always points at a reachable port.
 
 ### 7. Common Docker commands
 
@@ -354,7 +356,16 @@ Make sure `HOST_IP` in the root `.env` matches your current LAN IP. Restart with
 Clear named volumes and rebuild: `docker compose down -v && docker compose up --build`.
 
 **Port conflicts:**
-If 3307, 8000, 8082, or 8090 are already in use, stop the conflicting service or create a `docker-compose.override.yml` to remap ports.
+If 3307, 8000, 8081, or 8090 are already in use by another project, set the matching override in the root `.env` and restart — no compose edits needed:
+
+```env
+DB_HOST_PORT=13307
+API_HOST_PORT=18000
+PMA_HOST_PORT=18090
+METRO_HOST_PORT=18081
+```
+
+`API_HOST_PORT` and `METRO_HOST_PORT` also feed the URLs the app uses (`APP_URL`, `EXPO_PUBLIC_API_URL`, Sanctum domains, the Expo QR), so overriding them keeps everything consistent. Re-run `./start.sh` (or `docker compose up`) to apply.
 
 **MySQL connection refused in backend:**
 The entrypoint waits up to 60 seconds for MySQL. Check `docker compose logs db` for errors.

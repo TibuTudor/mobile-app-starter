@@ -73,7 +73,7 @@ cp .env.example .env   # Set HOST_IP to your LAN IP
 docker compose up --build
 ```
 
-This starts MySQL, the Laravel API (port 8000), phpMyAdmin (port 8090), and the Expo Metro bundler (port 8082). The backend entrypoint handles `composer install`, `.env` configuration, migrations, and starting the server automatically.
+This starts MySQL, the Laravel API (port 8000), phpMyAdmin (port 8090), and the Expo Metro bundler (port 8081). The backend entrypoint handles `composer install`, `.env` configuration, migrations, and starting the server automatically. (Host ports are overridable via `API_HOST_PORT` / `DB_HOST_PORT` / `PMA_HOST_PORT` / `METRO_HOST_PORT` in the root `.env`.)
 
 Docker files:
 - `Dockerfile` — PHP 8.2-cli with pdo_mysql, zip, bcmath, gd, mbstring, xml + Composer 2
